@@ -22,5 +22,5 @@ def interactive_plot(result_df):
         st.plotly_chart(fig, use_container_width=True)
 
 if __name__ == "__main__":
-    df = pd.read_csv('data_political_lines.csv')
+    df = pd.read_csv('original_political_lines.csv')
     interactive_plot(df)
