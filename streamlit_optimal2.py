@@ -9,7 +9,7 @@ def interactive_plot(result_df):
 
     x_axis = st.selectbox('X-Axis', options=['Effective_Guardian_prop', 'GN_prop', 'EU_prop'], index=0)
     y_axis = st.selectbox('Y-Axis', options=['Effective_Telegraph_prop', 'GS_prop', 'nonEU_prop'], index=1)
-    color = st.selectbox('Color', options=['macro', 'Perspective(ws)', 'Value(s)', 'total_dictionaries', 'dehuman_score'], index=0)
+    color = st.selectbox('Color', options=['macro', 'Perspective(ws)', 'Perspective(wo)', 'Value(s)', 'Value(o)', 'total_dictionaries'], index=0)
     size = st.selectbox('Size', options=['n_articles', 'num_svos'], index=0)
     num_clusters = st.slider('Number of Clusters', min_value=1, max_value=len(result_df), value=10)
 
