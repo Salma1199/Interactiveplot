@@ -81,9 +81,14 @@ def interactive_plot(result_df):
             hover_name='title',
             template='simple_white'
         )
-        fig.update_layout(transition_duration=500)
+        # Update axis titles to be user-friendly
+        fig.update_layout(
+            xaxis_title=x_axis,
+            yaxis_title=y_axis,
+            transition_duration=500
+        )
         st.plotly_chart(fig, use_container_width=True)
-
+        
 if __name__ == "__main__":
     df = pd.read_csv('optimal2_political_lines.csv')
     interactive_plot(df)
