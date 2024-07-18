@@ -24,9 +24,21 @@
 # if __name__ == "__main__":
 #     df = pd.read_csv('optimal2_political_lines.csv')
 #     interactive_plot(df)
+
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
+
+# Define a consistent color map for your categories
+CATEGORY_COLORS = {
+    'integration': '#1f77b4',  # blue
+    'public attitudes': '#ff7f0e',  # orange
+    'flows': '#2ca02c',  # green
+    'systems/policy': '#d62728',  # red
+    'economics': '#9467bd',  # purple
+    'crime/law': '#8c564b',  # brown
+    'international issues/benchmarks': '#e377c2',  # pink
+}
 
 def interactive_plot(result_df):
     st.title('Interactive Plot of Cluster Results')
@@ -102,6 +114,7 @@ def interactive_plot(result_df):
                     name=category,
                     marker=dict(
                         size=subset[size_options[size]],
+                        color=CATEGORY_COLORS.get(category, '#7f7f7f'),  # default to gray if category not found
                         sizemode='area',
                         sizeref=2.*max(filtered_df[size_options[size]])/(40.**2),
                         sizemin=4
@@ -149,7 +162,7 @@ def interactive_plot(result_df):
         )
 
         st.plotly_chart(fig, use_container_width=True)
-     
+
 if __name__ == "__main__":
-    df = pd.read_csv('optimal2_political_lines.csv')
+    df = pd.read_csv('original_political_lines.csv')
     interactive_plot(df)
