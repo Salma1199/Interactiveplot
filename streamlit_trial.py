@@ -98,7 +98,7 @@ def interactive_plot(result_df):
     st.title('Interactive Plot of Cluster Results')
 
     plot_options = {
-        'Guardian vs Telegraph': ('Effective_Telegraph_prop', 'Effective_Guardian_prop'),
+        'Guardian vs Telegraph': ('Effective_Guardian_prop', 'Effective_Telegraph_prop'),
         'Global South Proportion': ('GS_prop', None),
         'Non-EU Proportion': ('nonEU_prop', None)
     }
@@ -134,6 +134,14 @@ def interactive_plot(result_df):
         else:
             y_values = filtered_df[y_col]
 
+        # Create hover text
+        hover_text = filtered_df.apply(lambda row: (
+            f"Title: {row['title']}<br>"
+            f"Macro: {row['macro']}<br>"
+            f"{plot_type.split(' ')[0]} Value: {row[x_col]:.3f}<br>"
+            f"{size}: {row[size_options[size]]}"
+        ), axis=1)
+
         if color_options[color] == 'macro':
             for category in filtered_df['macro'].unique():
                 subset = filtered_df[filtered_df['macro'] == category]
@@ -148,7 +156,7 @@ def interactive_plot(result_df):
                         sizeref=2.*max(filtered_df[size_options[size]])/(40.**2),
                         sizemin=4
                     ),
-                    text=subset['title'],
+                    text=hover_text[subset.index],
                     hoverinfo='text'
                 ))
         else:
@@ -165,14 +173,25 @@ def interactive_plot(result_df):
                     sizeref=2.*max(filtered_df[size_options[size]])/(40.**2),
                     sizemin=4
                 ),
-                text=filtered_df['title'],
+                text=hover_text,
                 hoverinfo='text'
             ))
 
+        # Set axis titles
+        if plot_type == 'Guardian vs Telegraph':
+            x_title = 'Guardian Proportion'
+            y_title = 'Telegraph Proportion'
+        elif plot_type == 'Global South Proportion':
+            x_title = 'Global South Proportion'
+            y_title = None
+        else:  # Non-EU Proportion
+            x_title = 'Non-EU Proportion'
+            y_title = None
+
         fig.update_layout(
             title=f'Distribution of Clusters: {plot_type}',
-            xaxis_title=x_col.replace('_', ' ').title(),
-            yaxis_title=y_col.replace('_', ' ').title() if y_col else None,
+            xaxis_title=x_title,
+            yaxis_title=y_title,
             showlegend=color_options[color] == 'macro',
             yaxis_visible=not is_horizontal,
             yaxis_showticklabels=not is_horizontal,
