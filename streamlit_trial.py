@@ -90,7 +90,6 @@
 #     df = pd.read_csv('original_political_lines.csv')
 #     interactive_plot(df)
 
-
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -111,7 +110,7 @@ def interactive_plot(result_df):
     }
 
     x_axis = st.selectbox('X-Axis', options=list(x_axis_options.keys()), index=0)
-    y_axis = st.selectbox('Y-Axis', options=list(y_axis_options.keys()), index=0)
+    y_axis = st.selectbox('Y-Axis', options=list(y_axis_options.keys()), index=1)
 
     color_options = {
         'Macro Topics': 'macro',
@@ -133,7 +132,11 @@ def interactive_plot(result_df):
     filtered_df = result_df.nlargest(num_clusters, 'n_articles')
 
     if not filtered_df.empty:
-        if x_axis == 'Guardian Proportion' and y_axis == 'Telegraph Proportion':
+        is_color_categorical = color_options[color] == 'macro'
+        
+        if (x_axis == 'Guardian Proportion' and y_axis == 'Telegraph Proportion') or \
+           (x_axis == 'GN Proportion' and y_axis == 'GS Proportion') or \
+           (x_axis == 'EU Proportion' and y_axis == 'Non-EU Proportion'):
             # Regular scatter plot
             fig = px.scatter(
                 filtered_df,
@@ -143,6 +146,8 @@ def interactive_plot(result_df):
                 size=size_options[size],
                 size_max=15,
                 hover_name='title',
+                color_discrete_sequence=px.colors.qualitative.Set1 if is_color_categorical else None,
+                color_continuous_scale='Viridis' if not is_color_categorical else None,
                 template='simple_white'
             )
         else:
@@ -157,28 +162,35 @@ def interactive_plot(result_df):
                 st.error("Invalid axis combination")
                 return
 
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=x_values,
-                y=[0] * len(filtered_df),
-                mode='markers',
-                marker=dict(
-                    size=filtered_df[size_options[size]],
-                    color=filtered_df[color_options[color]],
-                    colorscale='Viridis',
-                    sizemode='area',
-                    sizeref=2.*max(filtered_df[size_options[size]])/(40.**2),
-                    sizemin=4
-                ),
-                text=filtered_df['title'],
-                hoverinfo='text'
-            ))
+            if is_color_categorical:
+                fig = px.scatter(
+                    filtered_df,
+                    x=x_values,
+                    y=[0] * len(filtered_df),
+                    color=color_options[color],
+                    size=size_options[size],
+                    size_max=15,
+                    hover_name='title',
+                    color_discrete_sequence=px.colors.qualitative.Set1,
+                    template='simple_white'
+                )
+            else:
+                fig = px.scatter(
+                    filtered_df,
+                    x=x_values,
+                    y=[0] * len(filtered_df),
+                    color=color_options[color],
+                    size=size_options[size],
+                    size_max=15,
+                    hover_name='title',
+                    color_continuous_scale='Viridis',
+                    template='simple_white'
+                )
 
             fig.update_layout(
                 xaxis_title=x_title,
                 yaxis_visible=False,
-                yaxis_showticklabels=False,
-                template='simple_white'
+                yaxis_showticklabels=False
             )
 
         fig.update_layout(transition_duration=500)
