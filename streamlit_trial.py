@@ -99,8 +99,8 @@ def interactive_plot(result_df):
 
     plot_options = {
         'Guardian vs Telegraph': ('Effective_Guardian_prop', 'Effective_Telegraph_prop'),
-        'Global South Proportion': ('GS_prop', None),
-        'Non-EU Proportion': ('nonEU_prop', None)
+        'Global North vs Global South': ('GS_prop', None),
+        'EU vs Non-EU': ('nonEU_prop', None)
     }
     plot_type = st.selectbox('Plot Type', options=list(plot_options.keys()))
 
@@ -135,12 +135,28 @@ def interactive_plot(result_df):
             y_values = filtered_df[y_col]
 
         # Create hover text
-        hover_text = filtered_df.apply(lambda row: (
-            f"Title: {row['title']}<br>"
-            f"Macro: {row['macro']}<br>"
-            f"{plot_type.split(' ')[0]} Value: {row[x_col]:.3f}<br>"
-            f"{size}: {row[size_options[size]]}"
-        ), axis=1)
+        if plot_type == 'Guardian vs Telegraph':
+            hover_text = filtered_df.apply(lambda row: (
+                f"Title: {row['title']}<br>"
+                f"Macro: {row['macro']}<br>"
+                f"Guardian Proportion: {row[x_col]:.3f}<br>"
+                f"Telegraph Proportion: {row[y_col]:.3f}<br>"
+                f"{size}: {row[size_options[size]]}"
+            ), axis=1)
+        elif plot_type == 'Global North vs Global South':
+            hover_text = filtered_df.apply(lambda row: (
+                f"Title: {row['title']}<br>"
+                f"Macro: {row['macro']}<br>"
+                f"Global South Proportion: {row[x_col]:.3f}<br>"
+                f"{size}: {row[size_options[size]]}"
+            ), axis=1)
+        else:  # EU vs Non-EU
+            hover_text = filtered_df.apply(lambda row: (
+                f"Title: {row['title']}<br>"
+                f"Macro: {row['macro']}<br>"
+                f"Non-EU Proportion: {row[x_col]:.3f}<br>"
+                f"{size}: {row[size_options[size]]}"
+            ), axis=1)
 
         if color_options[color] == 'macro':
             for category in filtered_df['macro'].unique():
@@ -181,10 +197,10 @@ def interactive_plot(result_df):
         if plot_type == 'Guardian vs Telegraph':
             x_title = 'Guardian Proportion'
             y_title = 'Telegraph Proportion'
-        elif plot_type == 'Global South Proportion':
+        elif plot_type == 'Global North vs Global South':
             x_title = 'Global South Proportion'
             y_title = None
-        else:  # Non-EU Proportion
+        else:  # EU vs Non-EU
             x_title = 'Non-EU Proportion'
             y_title = None
 
