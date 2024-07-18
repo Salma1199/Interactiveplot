@@ -26,28 +26,18 @@
 #     interactive_plot(df)
 import pandas as pd
 import streamlit as st
-import plotly.express as px
+import plotly.graph_objects as go
 
 def interactive_plot(result_df):
     st.title('Interactive Plot of Cluster Results')
 
-    # Mapping user-friendly names to DataFrame column names for axes
-    x_axis_options = {
-        'Guardian Proportion': 'Effective_Guardian_prop',
-        'GN Proportion': 'GN_prop',
-        'EU Proportion': 'EU_prop'
+    plot_options = {
+        'Guardian vs Telegraph': ('Effective_Guardian_prop', 'Effective_Telegraph_prop'),
+        'Global North vs Global South': ('GS_prop', None),
+        'EU vs Non-EU': ('nonEU_prop', None)
     }
-    y_axis_options = {
-        'Telegraph Proportion': 'Effective_Telegraph_prop',
-        'GS Proportion': 'GS_prop',
-        'Non-EU Proportion': 'nonEU_prop'
-    }
+    plot_type = st.selectbox('Plot Type', options=list(plot_options.keys()))
 
-    # Select boxes for X and Y axes using friendly names
-    x_axis = st.selectbox('X-Axis', options=list(x_axis_options.keys()), index=0)
-    y_axis = st.selectbox('Y-Axis', options=list(y_axis_options.keys()), index=0)
-
-    # Mapping for color options with friendly names
     color_options = {
         'Macro Topics': 'macro',
         'Perspective (WS)': 'Perspective(ws)',
@@ -56,39 +46,110 @@ def interactive_plot(result_df):
         'Value (O)': 'Value(o)',
         'Dictionary Counts': 'total_dictionaries'
     }
-    color = st.selectbox('Color', options=list(color_options.keys()), index=0)
+    color = st.selectbox('Color', options=list(color_options.keys()))
 
-    # Size options with friendly names
     size_options = {
         'Number of Articles': 'n_articles',
         'Number of SVOs': 'num_svos'
     }
-    size = st.selectbox('Size', options=list(size_options.keys()), index=0)
+    size = st.selectbox('Size', options=list(size_options.keys()))
 
     num_clusters = st.slider('Number of Clusters', min_value=1, max_value=len(result_df), value=10)
-
-    # Filtering DataFrame based on the number of clusters
     filtered_df = result_df.nlargest(num_clusters, 'n_articles')
-    
+
     if not filtered_df.empty:
-        fig = px.scatter(
-            filtered_df,
-            x=x_axis_options[x_axis],  # Map user-friendly names to DataFrame columns for X axis
-            y=y_axis_options[y_axis],  # Map user-friendly names to DataFrame columns for Y axis
-            color=color_options[color],  # Use the mapping for color
-            size=size_options[size],  # Map user-friendly names to DataFrame columns for size
-            size_max=15,
-            hover_name='title',
-            template='simple_white'
-        )
-        # Update axis titles to be user-friendly
+        fig = go.Figure()
+
+        x_col, y_col = plot_options[plot_type]
+        is_horizontal = y_col is None
+
+        if is_horizontal:
+            y_values = [0] * len(filtered_df)
+        else:
+            y_values = filtered_df[y_col]
+
+        # Create hover text
+        if plot_type == 'Guardian vs Telegraph':
+            hover_text = filtered_df.apply(lambda row: (
+                f"Title: {row['title']}<br>"
+                f"Macro: {row['macro']}<br>"
+                f"Guardian Proportion: {row[x_col]:.3f}<br>"
+                f"Telegraph Proportion: {row[y_col]:.3f}<br>"
+                f"{size}: {row[size_options[size]]}"
+            ), axis=1)
+        elif plot_type == 'Global North vs Global South':
+            hover_text = filtered_df.apply(lambda row: (
+                f"Title: {row['title']}<br>"
+                f"Macro: {row['macro']}<br>"
+                f"Global South Proportion: {row[x_col]:.3f}<br>"
+                f"{size}: {row[size_options[size]]}"
+            ), axis=1)
+        else:  # EU vs Non-EU
+            hover_text = filtered_df.apply(lambda row: (
+                f"Title: {row['title']}<br>"
+                f"Macro: {row['macro']}<br>"
+                f"Non-EU Proportion: {row[x_col]:.3f}<br>"
+                f"{size}: {row[size_options[size]]}"
+            ), axis=1)
+
+        if color_options[color] == 'macro':
+            for category in filtered_df['macro'].unique():
+                subset = filtered_df[filtered_df['macro'] == category]
+                fig.add_trace(go.Scatter(
+                    x=subset[x_col],
+                    y=y_values[:len(subset)] if is_horizontal else subset[y_col],
+                    mode='markers',
+                    name=category,
+                    marker=dict(
+                        size=subset[size_options[size]],
+                        sizemode='area',
+                        sizeref=2.*max(filtered_df[size_options[size]])/(40.**2),
+                        sizemin=4
+                    ),
+                    text=hover_text[subset.index],
+                    hoverinfo='text'
+                ))
+        else:
+            fig.add_trace(go.Scatter(
+                x=filtered_df[x_col],
+                y=y_values if is_horizontal else filtered_df[y_col],
+                mode='markers',
+                marker=dict(
+                    size=filtered_df[size_options[size]],
+                    color=filtered_df[color_options[color]],
+                    colorscale='Viridis',
+                    showscale=True,
+                    sizemode='area',
+                    sizeref=2.*max(filtered_df[size_options[size]])/(40.**2),
+                    sizemin=4
+                ),
+                text=hover_text,
+                hoverinfo='text'
+            ))
+
+        # Set axis titles
+        if plot_type == 'Guardian vs Telegraph':
+            x_title = 'Guardian Proportion'
+            y_title = 'Telegraph Proportion'
+        elif plot_type == 'Global North vs Global South':
+            x_title = 'Global South Proportion'
+            y_title = None
+        else:  # EU vs Non-EU
+            x_title = 'Non-EU Proportion'
+            y_title = None
+
         fig.update_layout(
-            xaxis_title=x_axis,
-            yaxis_title=y_axis,
-            transition_duration=500
+            title=f'Distribution of Clusters: {plot_type}',
+            xaxis_title=x_title,
+            yaxis_title=y_title,
+            showlegend=color_options[color] == 'macro',
+            yaxis_visible=not is_horizontal,
+            yaxis_showticklabels=not is_horizontal,
+            height=600
         )
+
         st.plotly_chart(fig, use_container_width=True)
-        
+     
 if __name__ == "__main__":
     df = pd.read_csv('optimal2_political_lines.csv')
     interactive_plot(df)
