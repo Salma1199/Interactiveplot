@@ -92,25 +92,17 @@
 
 import pandas as pd
 import streamlit as st
-import plotly.express as px
 import plotly.graph_objects as go
 
 def interactive_plot(result_df):
     st.title('Interactive Plot of Cluster Results')
 
-    x_axis_options = {
-        'Guardian Proportion': 'Effective_Guardian_prop',
-        'GN Proportion': 'GN_prop',
-        'EU Proportion': 'EU_prop'
+    plot_options = {
+        'Guardian vs Telegraph': ('Effective_Telegraph_prop', 'Effective_Guardian_prop'),
+        'Global South Proportion': ('GS_prop', None),
+        'Non-EU Proportion': ('nonEU_prop', None)
     }
-    y_axis_options = {
-        'Telegraph Proportion': 'Effective_Telegraph_prop',
-        'GS Proportion': 'GS_prop',
-        'Non-EU Proportion': 'nonEU_prop'
-    }
-
-    x_axis = st.selectbox('X-Axis', options=list(x_axis_options.keys()), index=0)
-    y_axis = st.selectbox('Y-Axis', options=list(y_axis_options.keys()), index=1)
+    plot_type = st.selectbox('Plot Type', options=list(plot_options.keys()))
 
     color_options = {
         'Macro Topics': 'macro',
@@ -120,69 +112,73 @@ def interactive_plot(result_df):
         'Value (O)': 'Value(o)',
         'Dictionary Counts': 'total_dictionaries'
     }
-    color = st.selectbox('Color', options=list(color_options.keys()), index=0)
+    color = st.selectbox('Color', options=list(color_options.keys()))
 
     size_options = {
         'Number of Articles': 'n_articles',
         'Number of SVOs': 'num_svos'
     }
-    size = st.selectbox('Size', options=list(size_options.keys()), index=0)
+    size = st.selectbox('Size', options=list(size_options.keys()))
 
     num_clusters = st.slider('Number of Clusters', min_value=1, max_value=len(result_df), value=10)
     filtered_df = result_df.nlargest(num_clusters, 'n_articles')
 
     if not filtered_df.empty:
-        is_color_categorical = color_options[color] == 'macro'
-        
-        if x_axis == 'Guardian Proportion' and y_axis == 'Telegraph Proportion':
-            # Regular scatter plot for Guardian vs Telegraph
-            fig = px.scatter(
-                filtered_df,
-                x=x_axis_options[x_axis],
-                y=y_axis_options[y_axis],
-                color=color_options[color],
-                size=size_options[size],
-                size_max=50,
-                hover_name='title',
-                color_discrete_sequence=px.colors.qualitative.Set1 if is_color_categorical else None,
-                color_continuous_scale='Viridis' if not is_color_categorical else None,
-                template='simple_white'
-            )
+        fig = go.Figure()
+
+        x_col, y_col = plot_options[plot_type]
+        is_horizontal = y_col is None
+
+        if is_horizontal:
+            y_values = [0] * len(filtered_df)
         else:
-            # Horizontal line plot for GN/GS and EU/Non-EU
-            if 'GS Proportion' in [x_axis, y_axis]:
-                x_values = filtered_df['GS_prop']
-                x_title = 'Global South Proportion'
-            elif 'Non-EU Proportion' in [x_axis, y_axis]:
-                x_values = filtered_df['nonEU_prop']
-                x_title = 'Non-EU Proportion'
-            else:
-                st.error("Invalid axis combination")
-                return
+            y_values = filtered_df[y_col]
 
-            fig = px.scatter(
-                filtered_df,
-                x=x_values,
-                y=[0] * len(filtered_df),
-                color=color_options[color],
-                size=size_options[size],
-                size_max=50,
-                hover_name='title',
-                color_discrete_sequence=px.colors.qualitative.Set1 if is_color_categorical else None,
-                color_continuous_scale='Viridis' if not is_color_categorical else None,
-                template='simple_white'
-            )
-
-            fig.update_layout(
-                xaxis_title=x_title,
-                yaxis_visible=False,
-                yaxis_showticklabels=False
-            )
+        if color_options[color] == 'macro':
+            for category in filtered_df['macro'].unique():
+                subset = filtered_df[filtered_df['macro'] == category]
+                fig.add_trace(go.Scatter(
+                    x=subset[x_col],
+                    y=y_values[:len(subset)] if is_horizontal else subset[y_col],
+                    mode='markers',
+                    name=category,
+                    marker=dict(
+                        size=subset[size_options[size]],
+                        sizemode='area',
+                        sizeref=2.*max(filtered_df[size_options[size]])/(40.**2),
+                        sizemin=4
+                    ),
+                    text=subset['title'],
+                    hoverinfo='text'
+                ))
+        else:
+            fig.add_trace(go.Scatter(
+                x=filtered_df[x_col],
+                y=y_values if is_horizontal else filtered_df[y_col],
+                mode='markers',
+                marker=dict(
+                    size=filtered_df[size_options[size]],
+                    color=filtered_df[color_options[color]],
+                    colorscale='Viridis',
+                    showscale=True,
+                    sizemode='area',
+                    sizeref=2.*max(filtered_df[size_options[size]])/(40.**2),
+                    sizemin=4
+                ),
+                text=filtered_df['title'],
+                hoverinfo='text'
+            ))
 
         fig.update_layout(
-            title=f'Distribution of Clusters Based on {x_axis} and {y_axis}',
-            transition_duration=500
+            title=f'Distribution of Clusters: {plot_type}',
+            xaxis_title=x_col.replace('_', ' ').title(),
+            yaxis_title=y_col.replace('_', ' ').title() if y_col else None,
+            showlegend=color_options[color] == 'macro',
+            yaxis_visible=not is_horizontal,
+            yaxis_showticklabels=not is_horizontal,
+            height=600
         )
+
         st.plotly_chart(fig, use_container_width=True)
 
 if __name__ == "__main__":
